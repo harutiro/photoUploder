@@ -5,12 +5,13 @@ import sharp from 'sharp';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import clipboardy from 'clipboardy';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
 const WATCH_FOLDER = process.env.WATCH_FOLDER!;
 const OUTPUT_FOLDER = './compressed';
-const UPLOADED_FILES_PATH = './uploaded.json'; // アップロード済みのリストを保存するファイル
+const UPLOADED_FILES_PATH = './uploaded.json';
 
 // 必要なディレクトリの作成
 if (!fs.existsSync(OUTPUT_FOLDER)) {
@@ -65,15 +66,17 @@ const saveUploadedFiles = () => {
 
 // 画像を処理してアップロードする
 const processImage = async (filePath: string) => {
-    const fileName = path.basename(filePath);
+    const originalFileName = path.basename(filePath);
 
     // すでにアップロード済みなら処理しない
-    if (uploadedFiles.has(fileName)) {
-        console.log(`⏩ Skipping already uploaded file: ${fileName}`);
+    if (uploadedFiles.has(originalFileName)) {
+        console.log(`⏩ Skipping already uploaded file: ${originalFileName}`);
         return;
     }
 
-    const outputFilePath = path.join(OUTPUT_FOLDER, fileName);
+    // UUIDを生成し、拡張子を.jpgに統一
+    const newFileName = `${uuidv4()}.jpg`;
+    const outputFilePath = path.join(OUTPUT_FOLDER, newFileName);
 
     try {
         await sharp(filePath)
@@ -81,10 +84,10 @@ const processImage = async (filePath: string) => {
             .toFormat('jpeg', { quality: 80 })
             .toFile(outputFilePath);
 
-        console.log(`✅ Compressed: ${fileName}`);
-        await uploadToR2(outputFilePath, fileName);
+        console.log(`✅ Compressed: ${originalFileName}`);
+        await uploadToR2(outputFilePath, newFileName);
     } catch (error) {
-        console.error(`❌ Failed to process ${fileName}:`, error);
+        console.error(`❌ Failed to process ${originalFileName}:`, error);
     }
 };
 
@@ -96,7 +99,7 @@ const uploadToR2 = async (filePath: string, fileName: string) => {
             Bucket: BUCKET_NAME,
             Key: fileName,
             Body: fileContent,
-            ContentType: 'image/jpeg',
+            ContentType: 'image/jpeg'
         });
 
         await s3Client.send(command);
@@ -107,7 +110,7 @@ const uploadToR2 = async (filePath: string, fileName: string) => {
 
         // アップロード済みのファイルとして記録
         uploadedFiles.add(fileName);
-        saveUploadedFiles(); // リストを更新
+        saveUploadedFiles();
     } catch (error) {
         console.error(`❌ Upload failed for ${fileName}:`, error);
     }
