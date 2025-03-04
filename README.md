@@ -1,63 +1,101 @@
 # Photo Uploader
 
-このプログラムは、指定したフォルダを監視し、新しく追加された画像を圧縮した後、Cloudflare R2 に自動アップロードするツールです。
-アップロードされた画像の URL はクリップボードにコピーされます。
+画像を監視フォルダにドロップすると自動的に圧縮し、Cloudflare R2にアップロードするツールです。
 
 ## 機能
-- 指定フォルダの監視
-- 画像（JPG, JPEG, PNG）の自動圧縮（1920x1080 にリサイズ & JPEG 80% 品質）
-- Cloudflare R2 への自動アップロード
-- アップロード済みの画像を記録し、再アップロードを防止
-- アップロード後の URL をクリップボードにコピー
 
-## 必要環境
-- Node.js (推奨: v18 以上)
-- Cloudflare R2 アカウント
+- 指定したフォルダの監視
+- 画像の自動圧縮
+- Cloudflare R2への自動アップロード
+- アップロードされた画像のURLを自動的にクリップボードにコピー
+- QRコードの生成
+- アップロード履歴の管理
+
+## 必要要件
+
+- Node.js 14.0.0以上
+- Cloudflare R2アカウントとアクセスキー
 
 ## インストール
 
-### 1. リポジトリをクローン
-```sh
-$ git clone https://github.com/your-repo/photo-uploader.git
-$ cd photo-uploader
+```bash
+# リポジトリをクローン
+git clone [repository-url]
+cd photoUploder
+
+# 依存パッケージのインストール
+npm install
 ```
 
-### 2. 依存関係をインストール
-```sh
-$ npm install
+## 環境設定
+
+1. `.env.default`ファイルを`.env`にコピーします。
+2. `.env`ファイルを編集し、以下の環境変数を設定します：
+
+```env
+WATCH_FOLDER=監視するフォルダのパス
+R2_BUCKET_NAME=CloudflareのR2バケット名
+R2_ACCOUNT_ID=CloudflareのアカウントID
+R2_ACCESS_KEY_ID=R2のアクセスキーID
+R2_SECRET_ACCESS_KEY=R2のシークレットアクセスキー
+R2_PUBLIC_URL=R2の公開URL
 ```
 
-### 3. 環境変数の設定
-`.env` ファイルを作成し、以下のように Cloudflare R2 の情報を設定してください。
+## 使用方法
 
-```ini
-R2_BUCKET_NAME=your-bucket-name
-R2_ACCOUNT_ID=your-account-id
-R2_ACCESS_KEY_ID=your-access-key-id
-R2_SECRET_ACCESS_KEY=your-secret-access-key
-R2_PUBLIC_URL=https://your-bucket-name.r2.cloudflarestorage.com
+### 開発モード
+
+```bash
+npm run dev
+```
+
+### ビルドと実行
+
+```bash
+# TypeScriptのビルド
+npm run build
+
+# アプリケーションの実行
+npm start
 ```
 
 ## 使い方
 
-### 1. 監視フォルダの指定
-`index.ts` の `WATCH_FOLDER` を、監視したいフォルダのパスに設定してください。
-```ts
-const WATCH_FOLDER = 'C:\\Users\\yourname\\Pictures\\VRChat\\2025-02';
+1. アプリケーションを起動します。
+2. 監視フォルダに画像ファイルをドラッグ＆ドロップします。
+3. 自動的に以下の処理が実行されます：
+   - 画像の圧縮
+   - Cloudflare R2へのアップロード
+   - アップロードされたURLのクリップボードへのコピー
+   - QRコードの生成
+
+## 主な依存パッケージ
+
+- `@aws-sdk/client-s3`: Cloudflare R2との連携
+- `chokidar`: フォルダの監視
+- `sharp`: 画像の圧縮処理
+- `clipboardy`: クリップボード操作
+- `qrcode`: QRコード生成
+- `dotenv`: 環境変数の管理
+- `uuid`: ユニークなファイル名の生成
+
+## ディレクトリ構造
+
+```
+photoUploder/
+├── compressed/     # 圧縮された画像の保存先
+├── test/          # テストファイル
+├── index.ts       # メインアプリケーションコード
+├── package.json   # プロジェクト設定
+├── tsconfig.json  # TypeScript設定
+└── .env          # 環境変数
 ```
 
-### 2. 開発モードで実行
-```sh
-$ npm run dev
-```
+## 注意事項
 
-### 3. 新しい画像が追加されたら、自動アップロード
-- `WATCH_FOLDER` に新しい画像を追加すると、自動で圧縮＆アップロードされます。
-- アップロード済みの画像は `uploaded.json` に記録され、再アップロードは行われません。
-
-## 注意点
-- `.env` ファイルには機密情報が含まれるため、公開リポジトリには追加しないようにしてください。
-- `uploaded.json` はアップロード済みのファイルリストを保存するため、削除するとすべての画像が再アップロードされます。
+- アップロードされたファイルの履歴は`uploaded.json`に保存されます
+- 監視フォルダとcompressedフォルダは自動的に作成されます
+- 既にアップロードされたファイルは再アップロードされません
 
 ## ライセンス
 MIT License
