@@ -2,8 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import chokidar from 'chokidar';
 import sharp from 'sharp';
-import AWS from 'aws-sdk';
-import clipboardy from 'clipboardy';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -18,12 +17,14 @@ const CLOUDFLARE_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
 const CLOUDFLARE_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
 
-const s3 = new AWS.S3({
-    accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
-    secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
+const s3Client = new S3Client({
+    credentials: {
+        accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
+        secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
+    },
     endpoint: `https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    s3ForcePathStyle: true,
-    signatureVersion: 'v4',
+    region: 'auto',
+    forcePathStyle: true,
 });
 
 // アップロード済みのファイルを記録するセット
@@ -79,15 +80,18 @@ const processImage = async (filePath: string) => {
 const uploadToR2 = async (filePath: string, fileName: string) => {
     try {
         const fileContent = fs.readFileSync(filePath);
-        await s3.putObject({
+        const command = new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: fileName,
             Body: fileContent,
             ContentType: 'image/jpeg',
-        }).promise();
+        });
+
+        await s3Client.send(command);
 
         const imageUrl = `${R2_PUBLIC_URL}/${fileName}`;
-        clipboardy.writeSync(imageUrl);
+        const clipboard = await import('clipboardy');
+        await clipboard.default.write(imageUrl);
         console.log(`📤 Uploaded: ${imageUrl} (Copied to clipboard)`);
 
         // アップロード済みのファイルとして記録
