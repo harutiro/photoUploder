@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const WATCH_FOLDER = 'C:\\Users\\harut\\Pictures\\VRChat\\2025-02';
+const WATCH_FOLDER = process.env.WATCH_FOLDER!;
 const OUTPUT_FOLDER = './compressed';
 const UPLOADED_FILES_PATH = './uploaded.json'; // アップロード済みのリストを保存するファイル
 
