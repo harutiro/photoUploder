@@ -1,15 +1,27 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import chokidar from 'chokidar';
 import sharp from 'sharp';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
+import clipboardy from 'clipboardy';
 
 dotenv.config();
 
 const WATCH_FOLDER = process.env.WATCH_FOLDER!;
 const OUTPUT_FOLDER = './compressed';
 const UPLOADED_FILES_PATH = './uploaded.json'; // アップロード済みのリストを保存するファイル
+
+// 必要なディレクトリの作成
+if (!fs.existsSync(OUTPUT_FOLDER)) {
+    fs.mkdirSync(OUTPUT_FOLDER, { recursive: true });
+    console.log(`📁 Created output directory: ${OUTPUT_FOLDER}`);
+}
+
+if (!fs.existsSync(WATCH_FOLDER)) {
+    fs.mkdirSync(WATCH_FOLDER, { recursive: true });
+    console.log(`📁 Created watch directory: ${WATCH_FOLDER}`);
+}
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 const CLOUDFLARE_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
@@ -90,8 +102,7 @@ const uploadToR2 = async (filePath: string, fileName: string) => {
         await s3Client.send(command);
 
         const imageUrl = `${R2_PUBLIC_URL}/${fileName}`;
-        const clipboard = await import('clipboardy');
-        await clipboard.default.write(imageUrl);
+        await clipboardy.write(imageUrl);
         console.log(`📤 Uploaded: ${imageUrl} (Copied to clipboard)`);
 
         // アップロード済みのファイルとして記録
@@ -106,7 +117,10 @@ const uploadToR2 = async (filePath: string, fileName: string) => {
 loadUploadedFiles();
 
 // 監視を開始
-chokidar.watch(WATCH_FOLDER, { persistent: true })
+chokidar.watch(WATCH_FOLDER, { 
+    persistent: true,
+    ignoreInitial: true  // 起動時の既存ファイルスキャンを無効化
+})
     .on('add', filePath => {
         if (filePath.match(/\.(jpg|jpeg|png)$/i)) {
             console.log(`📸 New image detected: ${filePath}`);
@@ -114,4 +128,4 @@ chokidar.watch(WATCH_FOLDER, { persistent: true })
         }
     });
 
-console.log('👀 Watching for new images...');
+console.log('👀 Watching for new images... (Only new files will be processed)');
